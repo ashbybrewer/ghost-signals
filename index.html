@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#070b0d">
+  <title>Ghost Signals — WebSDR Audio Archeologist</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="noise"></div>
+  <header class="topbar">
+    <a class="brand" href="#" aria-label="Ghost Signals home">
+      <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span>
+        <strong>GHOST SIGNALS</strong>
+        <small>WEBSDR AUDIO ARCHEOLOGIST</small>
+      </span>
+    </a>
+    <div class="mission">
+      <span class="status-dot"></span>
+      <span id="mission-status">PASSIVE RECEIVE MODE</span>
+      <b id="utc-clock">00:00:00 UTC</b>
+    </div>
+    <button class="icon-button" id="about-button" aria-label="About this prototype">?</button>
+  </header>
+
+  <main class="app-shell">
+    <aside class="left-panel panel">
+      <div class="panel-heading">
+        <span>01 / SPECTRUM SCAN</span>
+        <b id="scan-state">STANDBY</b>
+      </div>
+
+      <section class="frequency-readout">
+        <span>CURRENT FREQUENCY</span>
+        <strong><span id="frequency-value">4.625</span><small>MHz</small></strong>
+        <div class="dial-track"><i id="dial-position"></i></div>
+        <div class="frequency-range"><span>0.1</span><span>30.0</span></div>
+      </section>
+
+      <section class="control-block">
+        <label for="frequency-slider">MANUAL TUNING</label>
+        <input id="frequency-slider" type="range" min="100" max="30000" value="4625" step="1">
+        <div class="step-controls">
+          <button data-step="-100">−100K</button>
+          <button data-step="-10">−10K</button>
+          <button data-step="10">+10K</button>
+          <button data-step="100">+100K</button>
+        </div>
+      </section>
+
+      <section class="control-block">
+        <span class="control-label">DEMODULATION</span>
+        <div class="mode-grid" id="mode-grid">
+          <button data-mode="AM" class="active">AM</button>
+          <button data-mode="USB">USB</button>
+          <button data-mode="LSB">LSB</button>
+          <button data-mode="CW">CW</button>
+        </div>
+      </section>
+
+      <section class="control-block">
+        <span class="control-label">SCAN REGION</span>
+        <div class="band-list" id="band-list">
+          <button data-min="1800" data-max="2000"><b>160M</b><span>1.8–2.0</span></button>
+          <button data-min="3500" data-max="4000"><b>80M</b><span>3.5–4.0</span></button>
+          <button data-min="7000" data-max="7300"><b>40M</b><span>7.0–7.3</span></button>
+          <button data-min="14000" data-max="14350"><b>20M</b><span>14.0–14.35</span></button>
+          <button data-min="100" data-max="30000" class="active"><b>ALL HF</b><span>0.1–30.0</span></button>
+        </div>
+      </section>
+
+      <button class="primary-button" id="scan-button">
+        <span class="button-pulse"></span>
+        <span id="scan-button-label">BEGIN SPECTRUM SCAN</span>
+      </button>
+
+      <section class="mission-block">
+        <div class="section-title"><span>FIELD MISSIONS</span><b>START HERE</b></div>
+        <p>Pick a mission. Ghost Signals will tune the radio, choose a receiver, and attempt a real capture.</p>
+        <button data-mission="watchlist"><strong>01 / CHECK THE BUZZER</strong><span>Capture the 4.625 MHz channel-marker watch</span></button>
+        <button data-mission="unscheduled"><strong>02 / HUNT UNSCHEDULED RF</strong><span>Check a utility frequency with no HFCC match</span></button>
+        <button data-mission="broadcast"><strong>03 / VERIFY A STATE BROADCAST</strong><span>Capture a transmission active on the official schedule</span></button>
+      </section>
+
+      <section class="watch-block">
+        <div class="section-title"><span>WATCH FREQUENCIES</span><b>REAL RF</b></div>
+        <div class="watch-list" id="watch-channel-list"></div>
+      </section>
+    </aside>
+
+    <section class="center-stage">
+      <div class="globe-panel panel">
+        <div class="stage-topline">
+          <div>
+            <span>GLOBAL RELAY TOPOLOGY</span>
+            <strong><i></i><span id="receiver-count">0</span> RECEIVERS REACHABLE</strong>
+          </div>
+          <div class="coordinates">
+            <span>SELECTED RELAY</span>
+            <b id="selected-coordinates">52.2292 N / 6.8750 E</b>
+          </div>
+        </div>
+        <canvas id="globe-canvas" aria-label="Interactive globe showing public receiver locations"></canvas>
+        <div class="globe-reticle"><span></span><i></i></div>
+        <div class="zoom-controls" aria-label="Globe zoom controls">
+          <button id="zoom-out" aria-label="Zoom globe out">−</button>
+          <button id="zoom-reset" aria-label="Reset globe zoom">1×</button>
+          <button id="zoom-in" aria-label="Zoom globe in">+</button>
+        </div>
+        <div class="globe-legend">
+          <span><i class="live"></i>REACHABLE</span>
+          <span><i class="unknown"></i>UNCHECKED</span>
+          <span><i class="route"></i>RELAY PATH</span>
+        </div>
+        <div class="signal-card" id="signal-card">
+          <span class="signal-index">SIG / 001</span>
+          <strong id="signal-name">UVB-76 WATCH</strong>
+          <div><b id="signal-frequency">4.625 MHz</b><span id="signal-mode">USB</span></div>
+          <p id="signal-location">RELAY: ENSCHEDE, NETHERLANDS</p>
+        </div>
+      </div>
+
+      <div class="spectrum-panel panel">
+        <div class="panel-heading">
+          <span>02 / LIVE SPECTRUM WATERFALL</span>
+          <b><i class="mini-dot"></i><span id="audio-source-label">SYNTHETIC FEED</span></b>
+        </div>
+        <div class="reality-strip mode-demo" id="reality-strip">
+          <strong id="reality-label">DEMO MODE — SYNTHETIC TRAINING SIGNAL</strong>
+          <span id="reality-detail">Useful for showing the analyzer, but not a real broadcast until a KiwiSDR sample is captured.</span>
+        </div>
+        <div class="spectrum-wrap">
+          <canvas id="spectrum-canvas"></canvas>
+          <div class="tuning-line"></div>
+          <div class="frequency-tag" id="frequency-tag">4.625 MHz</div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="right-panel panel">
+      <div class="panel-heading">
+        <span>03 / SIGNAL LAB</span>
+        <b>DSP ONLINE</b>
+      </div>
+
+      <section class="classification">
+        <div class="eyebrow">PROBABLE SIGNAL CLASS</div>
+        <div class="class-result">
+          <div class="radar-icon"><i></i><i></i><i></i></div>
+          <div>
+            <strong id="classification-label">NARROWBAND CARRIER</strong>
+            <span id="classification-subtitle">Steady amplitude / low entropy</span>
+          </div>
+          <b id="confidence-value">87%</b>
+        </div>
+        <div class="confidence-track"><i id="confidence-bar"></i></div>
+      </section>
+
+      <section class="analysis-block">
+        <div class="section-title"><span>AI FIELD ANALYST</span><b>LOCAL INFERENCE</b></div>
+        <button class="analyst-button" id="analyst-button"><i></i>GENERATE BEST-GUESS BRIEF</button>
+        <div class="analyst-grid">
+          <div><span>LIKELY ORIGIN</span><strong id="origin-guess">Insufficient evidence</strong></div>
+          <div><span>PROBABLE CONTENT</span><strong id="content-guess">Run analysis to generate a hypothesis</strong></div>
+          <div><span>LIKELY PURPOSE</span><strong id="purpose-guess">Unknown</strong></div>
+        </div>
+        <div class="analyst-confidence">
+          <span>HYPOTHESIS CONFIDENCE</span>
+          <b id="analyst-confidence">0%</b>
+          <i><em id="analyst-confidence-bar"></em></i>
+        </div>
+        <p class="analyst-evidence" id="analyst-evidence">Waiting for frequency, mode, receiver geometry, and DSP evidence.</p>
+        <p class="analyst-warning">Best guess only. A single receiver cannot geolocate a transmitter; reliable origin finding requires synchronized multi-station TDoA.</p>
+        <div class="yolo-panel" id="yolo-panel">
+          <div><span>YOLO BET // SPECULATIVE</span><b id="yolo-confidence">0%</b></div>
+          <strong id="yolo-headline">Waiting for analyst context</strong>
+          <p id="yolo-bet">This section is intentionally a low-confidence, high-drama interpretation. It is not evidence.</p>
+          <em>LOW CONFIDENCE. ENTERTAINMENT / HYPOTHESIS GENERATOR ONLY.</em>
+        </div>
+      </section>
+
+      <section class="intercept-block">
+        <div class="section-title"><span>PRIORITY INTERCEPT</span><b id="intercept-status">AWAITING REAL RF</b></div>
+        <div class="intercept-card idle" id="intercept-card">
+          <div class="intercept-header">
+            <strong id="intercept-title">NO INTERCEPT LOGGED</strong>
+            <span id="intercept-priority">STANDBY</span>
+          </div>
+          <div class="intercept-meta" id="intercept-meta">Capture a real SDR sample to generate an evidence-based intercept.</div>
+          <div class="intercept-grid">
+            <div><span>PATTERN</span><strong id="intercept-pattern">Unknown</strong></div>
+            <div><span>PROBABLE CLASS</span><strong id="intercept-class">Unknown</strong></div>
+            <div><span>CONTENT HANDLING</span><strong id="intercept-content">Not analyzed</strong></div>
+            <div><span>WHY THIS MATTERS</span><strong id="intercept-why">No real capture yet</strong></div>
+          </div>
+          <button id="promote-case-button" disabled>PROMOTE TO CASE FILE</button>
+        </div>
+      </section>
+
+      <section class="case-block">
+        <div class="section-title"><span>THE VAULT // CASE FILES</span><b id="case-count">0 OPEN</b></div>
+        <div class="case-list" id="case-list">
+          <p class="empty-case">No cases yet. Promote a real intercept to begin tracking it.</p>
+        </div>
+      </section>
+
+      <section class="schedule-block">
+        <div class="section-title"><span>OFFICIAL SCHEDULE CORRELATOR</span><b id="schedule-status">LOADING A26</b></div>
+        <div class="schedule-match" id="schedule-match">
+          <span>SELECTED FREQUENCY</span>
+          <strong>No active official schedule match</strong>
+          <p>Unscheduled signals may still be genuine utility, amateur, military, or clandestine transmissions.</p>
+        </div>
+        <div class="section-title schedule-list-title"><span>STATE-LINKED BROADCASTS LIVE NOW</span><b id="live-broadcast-count">0 FOUND</b></div>
+        <div class="schedule-list" id="schedule-list"></div>
+      </section>
+
+      <section class="waveform-block">
+        <div class="section-title">
+          <span>WAVEFORM ANALYSIS</span>
+          <b id="sample-rate">48 kHz</b>
+        </div>
+        <canvas id="waveform-canvas"></canvas>
+        <div class="metric-grid">
+          <div><span>RMS ENERGY</span><b id="rms-value">0.000</b></div>
+          <div><span>ZERO CROSS</span><b id="zero-cross-value">0.000</b></div>
+          <div><span>CENTROID</span><b id="centroid-value">0 Hz</b></div>
+          <div><span>PEAK BIN</span><b id="peak-value">0 Hz</b></div>
+        </div>
+      </section>
+
+      <section class="source-block">
+        <div class="section-title"><span>AUDIO SOURCE</span><b>WEB AUDIO API</b></div>
+        <button class="source-button active" id="demo-audio-button">
+          <span><i></i>GENERATED RADIO FEED</span><small>Interactive demo signal</small>
+        </button>
+        <button class="source-button" id="capture-audio-button">
+          <span><i></i>CAPTURE LIVE TAB AUDIO</span><small>Analyze an open WebSDR tab</small>
+        </button>
+        <button class="source-button" id="real-sample-button">
+          <span><i></i>CAPTURE REAL SDR SAMPLE</span><small id="real-sample-status">6 seconds from selected KiwiSDR</small>
+        </button>
+      </section>
+
+      <section class="receiver-block">
+        <div class="section-title"><span>PUBLIC RECEIVERS</span><b id="receiver-refresh">CHECKING</b></div>
+        <div class="receiver-list" id="receiver-list"></div>
+      </section>
+
+      <section class="event-block">
+        <div class="section-title"><span>DETECTION LOG</span><button id="clear-log">CLEAR</button></div>
+        <div class="event-log" id="event-log"></div>
+      </section>
+    </aside>
+  </main>
+
+  <div class="modal-backdrop" id="about-modal" hidden>
+    <div class="modal">
+      <button class="modal-close" id="modal-close">×</button>
+      <span class="eyebrow">PROJECT BRIEF / V0.1</span>
+      <h1>Radio archaeology,<br>without pretending.</h1>
+      <p>Ghost Signals is a local portfolio prototype for exploring public, receive-only radio sources. The interface can generate a test feed or analyze audio you explicitly share from an open receiver tab.</p>
+      <p>Public WebSDR receivers remain in their own interfaces, honoring their operators and terms. This prototype does not transmit, bypass access controls, or decode encrypted communications.</p>
+      <div class="modal-tech"><span>CANVAS 2D</span><span>WEB AUDIO</span><span>DSP HEURISTICS</span><span>PYTHON</span></div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
